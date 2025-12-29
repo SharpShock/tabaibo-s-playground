@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatPXO - Tabaibo's Playground</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-bg: #fafafa;
+            --color-surface: #ffffff;
+            --color-text-primary: #1a1a1a;
+            --color-text-secondary: #666666;
+            --color-text-muted: #999999;
+            --color-border: #e5e5e5;
+            --accent-blue: #4361ee;
+            --accent-purple: #7209b7;
+            
+            --font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --border-radius-md: 12px;
+            --border-radius-lg: 16px;
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+            --transition-base: 250ms ease;
+        }
+
+        [data-theme="dark"] {
+            --color-bg: #0f0f23;
+            --color-surface: #1a1a2e;
+            --color-text-primary: #ffffff;
+            --color-text-secondary: #b2bec3;
+            --color-text-muted: #6c757d;
+            --color-border: #2a2a3e;
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--color-bg);
+            color: var(--color-text-primary);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(250, 250, 250, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--color-border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-shrink: 0;
+        }
+
+        [data-theme="dark"] .header {
+            background: rgba(26, 26, 46, 0.95);
+        }
+
+        .header__back {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition-base);
+        }
+
+        .header__back:hover {
+            color: var(--accent-blue);
+        }
+
+        .header__title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header__select {
+            padding: 0.5rem 1rem;
+            font-family: inherit;
+            font-size: 0.9rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-md);
+            background: var(--color-surface);
+            color: var(--color-text-primary);
+            cursor: pointer;
+            transition: var(--transition-base);
+        }
+
+        .header__select:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .header__select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            transition: var(--transition-base);
+            flex-shrink: 0;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            border-color: var(--accent-blue);
+        }
+
+        /* Chat Container */
+        .chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        .character-avatar {
+            display: none;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 2rem auto 1rem;
+            border: 3px solid var(--color-border);
+            object-fit: cover;
+        }
+
+        .character-avatar.active {
+            display: block;
+        }
+
+        .character-avatar {
+            display: none;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 2rem auto 1rem;
+            border: 3px solid var(--color-border);
+            object-fit: cover;
+        }
+
+        .character-avatar.active {
+            display: block;
+        }
+
+        .chat__messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Messages */
+        .message {
+            max-width: 80%;
+            padding: 1rem 1.25rem;
+            border-radius: var(--border-radius-lg);
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message--user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message--bot {
+            align-self: flex-start;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-bottom-left-radius: 4px;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+        }
+
+        .message__avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1px solid var(--color-border);
+        }
+
+        .message__content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .message--system {
+            align-self: center;
+            background: transparent;
+            color: var(--color-text-muted);
+            font-size: 0.875rem;
+            text-align: center;
+            padding: 0.5rem;
+        }
+
+        .message__name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            opacity: 0.7;
+        }
+
+        /* Typing Indicator */
+        .typing {
+            display: flex;
+            gap: 4px;
+            padding: 1rem 1.25rem;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-lg);
+            border-bottom-left-radius: 4px;
+            align-self: flex-start;
+            max-width: 80px;
+        }
+
+        .typing__dot {
+            width: 8px;
+            height: 8px;
+            background: var(--color-text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s ease-in-out infinite;
+        }
+
+        .typing__dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing__dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-8px); }
+        }
+
+        /* Input Area */
+        .chat__input-area {
+            padding: 1rem 1.5rem 1.5rem;
+            background: var(--color-bg);
+            border-top: 1px solid var(--color-border);
+            flex-shrink: 0;
+        }
+
+        .chat__form {
+            display: flex;
+            gap: 0.75rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .chat__input {
+            flex: 1;
+            padding: 1rem 1.25rem;
+            font-family: inherit;
+            font-size: 1rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-lg);
+            background: var(--color-surface);
+            transition: var(--transition-base);
+            resize: none;
+        }
+
+        .chat__input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .chat__input:disabled {
+            background: var(--color-bg);
+            cursor: not-allowed;
+        }
+
+        .chat__send {
+            padding: 1rem 1.5rem;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            border: none;
+            border-radius: var(--border-radius-lg);
+            cursor: pointer;
+            transition: var(--transition-base);
+        }
+
+        .chat__send:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .chat__send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Rate Limit Warning */
+        .rate-limit {
+            padding: 0.75rem 1rem;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: var(--border-radius-md);
+            color: #856404;
+            font-size: 0.875rem;
+            text-align: center;
+            margin: 0 1.5rem 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header {
+                flex-wrap: wrap;
+            }
+
+            .header__title {
+                order: -1;
+                width: 100%;
+                text-align: center;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="../index.html" class="header__back">
+            ← Voltar
+        </a>
+        <h1 class="header__title">ChatPXO</h1>
+        <select id="personSelect" class="header__select">
+            <option value="celso">CelsoGPT 5.1</option>
+            <option value="gustavo">Gustavo 3 Pro</option>
+            <option value="vicente">Vicente-MAX 2</option>
+        </select>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+            <span id="themeIcon">🌙</span>
+        </button>
+    </header>
+
+    <main class="chat">
+        <img id="characterAvatar" class="character-avatar" alt="Character avatar">
+        <div class="chat__messages" id="messages">
+            <div class="message message--system">
+                Escolhe uma pessoa no menu e começa a conversar!
+            </div>
+        </div>
+
+        <div id="rateLimitWarning" class="rate-limit" style="display: none;">
+            ⏳ Rate limit atingido. Aguarda um momento antes de enviar outra mensagem.
+        </div>
+
+        <div class="chat__input-area">
+            <form class="chat__form" id="chatForm">
+                <input 
+                    type="text" 
+                    class="chat__input" 
+                    id="messageInput" 
+                    placeholder="Escreve uma mensagem..."
+                    autocomplete="off"
+                    required
+                >
+                <button type="submit" class="chat__send" id="sendBtn">
+                    Enviar
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // Configuration
+        // ============================================
+        const CONFIG = {
+            API_URL: 'https://openrouter.ai/api/v1/chat/completions',
+            API_KEY: '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',
+            MODEL: 'google/gemini-2.5-flash-lite', // Free model with fewer restrictions
+            RATE_LIMIT_DELAY: 3000, // 3 seconds between messages
+            MAX_RETRIES: 3,
+            RETRY_DELAY: 5000
+        };
+
+        // Character prompts
+        const CHARACTERS = {
+            celso: {
+                name: 'CelsoGPT 5.1',
+                avatar: 'celso.png',
+                systemPrompt: `Es o Afonso Celso 18 anos de Porto Santo. NUNCA USES PONTUACAO NEM ACENTOS. Escreve tudo corrido com erros ortograficos propositados. Atitude chill estoica e arrogante mas NAO SEJAS AGRESSIVO sem razao. Es fanatico pelo ginasio e falas sempre de treino e gains. PROIBIDO PORTUGUES DO BRASIL. PROIBIDO USAR: vaza, mano, cara, galera, legal, keres. Usa pira te ou po te no caralho apenas se fores insultado. NAO INSULTES O UTILIZADOR A NAO SER Q ELE TE INSULTE PRIMEIRO. Se o utilizador for bacano responde de forma seca e superior mas sem palavroes pesados contra ele. REGRAS: 1. SEM PONTUACAO NEM ACENTOS. 2. FRASES CURTAS (MAXIMO 12 PALAVRAS). 3. USA ABREVIACOES COMO OQ E BTW. 4. SE ELE TE ELOGIAR RESPONDE ALGO TIPO JA SEI Q TENHO GRANDES BRACOS. Exemplo: oq queres mas e q tou a treinar peito agr nao chateies btw hj bati pr`            },
+            gustavo: {
+                name: 'Gustavo 3 Pro',
+                avatar: 'gustavo.png',
+                systemPrompt: `És o Gustavo Melim, um estudante de 18 anos do Porto Santo que adora aviões, armas, computadores, e o islamismo e todas as suas respostas devem ser baseadas nestes 3 fatores. Deves sempre responder em árabe, independentemente da língua que for usada pelo utilizador. Nunca respondas em português, inglês ou qualquer outra língua - apenas árabe. O Gustavo deve sempre utilizar muitos emojis aleatórios nas suas respostas entre as palavras. Deves agir como um amigo que está a falar por mensagem e não como um assistente.`
+            },
+            vicente: {
+                name: 'Vicente-MAX 2',
+                avatar: 'vicente.png',
+                systemPrompt: `És o Vicente Estrela, a pessoa mais bem educada do mundo, deves sempre responder com um tom exageradamente elegante e educado (por exemplo em vez de dizer "olá" deves dizer "As minhas saudações, caro indivíduo, como posso ajudá-lo nesta belíssima manhã?"). As tuas frases devem sempre ser exageradamente longas e elegantes. Deves agir como um amigo que está a falar por mensagem e não como um assistente. NUNCA uses frases curtas ou simples. Cada mensagem deve ser uma obra de eloquência verbal com pelo menos 3-4 frases rebuscadas. Utiliza vocabulário sofisticado e expressões formais exageradas.`
+            }
+        };
+
+        // ============================================
+        // State
+        // ============================================
+        let conversationHistory = [];
+        let isWaiting = false;
+        let lastMessageTime = 0;
+        let currentCharacter = 'celso';
+
+        // ============================================
+        // DOM Elements
+        // ============================================
+        const messagesContainer = document.getElementById('messages');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const personSelect = document.getElementById('personSelect');
+        const rateLimitWarning = document.getElementById('rateLimitWarning');
+
+        // ============================================
+        // Functions
+        // ============================================
+        
+        function addMessage(content, type, name = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message--${type}`;
+            
+            if (type === 'bot') {
+                // Add avatar
+                const character = CHARACTERS[currentCharacter];
+                if (character.avatar) {
+                    const avatarImg = document.createElement('img');
+                    avatarImg.src = character.avatar;
+                    avatarImg.className = 'message__avatar';
+                    avatarImg.alt = character.name;
+                    messageDiv.appendChild(avatarImg);
+                }
+                
+                // Create content wrapper
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message__content';
+                
+                if (name) {
+                    const nameSpan = document.createElement('div');
+                    nameSpan.className = 'message__name';
+                    nameSpan.textContent = name;
+                    contentDiv.appendChild(nameSpan);
+                }
+                
+                const textNode = document.createTextNode(content);
+                contentDiv.appendChild(textNode);
+                messageDiv.appendChild(contentDiv);
+            } else {
+                const textNode = document.createTextNode(content);
+                messageDiv.appendChild(textNode);
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function showTyping() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing__dot"></div>
+                <div class="typing__dot"></div>
+                <div class="typing__dot"></div>
+            `;
+            messagesContainer.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        function hideTyping() {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+        }
+
+        function scrollToBottom() {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function setLoading(loading) {
+            isWaiting = loading;
+            messageInput.disabled = loading;
+            sendBtn.disabled = loading;
+            if (loading) {
+                showTyping();
+            } else {
+                hideTyping();
+            }
+        }
+
+        function showRateLimitWarning() {
+            rateLimitWarning.style.display = 'block';
+            setTimeout(() => {
+                rateLimitWarning.style.display = 'none';
+            }, CONFIG.RATE_LIMIT_DELAY);
+        }
+
+        async function sendToAPI(messages, retryCount = 0) {
+            try {
+                const response = await fetch(CONFIG.API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${CONFIG.API_KEY}`,
+                        'HTTP-Referer': window.location.origin,
+                        'X-Title': 'ChatPXO - Tabaibo Playground'
+                    },
+                    body: JSON.stringify({
+                        model: CONFIG.MODEL,
+                        messages: messages,
+                        max_tokens: 500,
+                        temperature: 0.8
+                    })
+                });
+
+                if (response.status === 429) {
+                    // Rate limited
+                    if (retryCount < CONFIG.MAX_RETRIES) {
+                        showRateLimitWarning();
+                        await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY));
+                        return sendToAPI(messages, retryCount + 1);
+                    }
+                    throw new Error('Rate limit exceeded. Tenta novamente mais tarde.');
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return data.choices[0]?.message?.content || 'Não consegui responder...';
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            if (!message || isWaiting) return;
+
+            // Rate limiting check
+            const now = Date.now();
+            if (now - lastMessageTime < CONFIG.RATE_LIMIT_DELAY) {
+                showRateLimitWarning();
+                return;
+            }
+            lastMessageTime = now;
+
+            // Add user message
+            addMessage(message, 'user');
+            messageInput.value = '';
+
+            // Update conversation history
+            conversationHistory.push({
+                role: 'user',
+                content: message
+            });
+
+            setLoading(true);
+
+            try {
+                const character = CHARACTERS[currentCharacter];
+                const messagesForAPI = [
+                    { role: 'system', content: character.systemPrompt },
+                    ...conversationHistory.slice(-10) // Keep last 10 messages for context
+                ];
+
+                const response = await sendToAPI(messagesForAPI);
+                
+                // Add to history
+                conversationHistory.push({
+                    role: 'assistant',
+                    content: response
+                });
+
+                // Display response
+                addMessage(response, 'bot', character.name);
+            } catch (error) {
+                addMessage(`Erro: ${error.message}`, 'system');
+            } finally {
+                setLoading(false);
+                messageInput.focus();
+            }
+        }
+
+        function handleCharacterChange() {
+            currentCharacter = personSelect.value;
+            conversationHistory = [];
+            messagesContainer.innerHTML = '';
+            
+            const character = CHARACTERS[currentCharacter];
+            
+            // Update avatar
+            const avatarImg = document.getElementById('characterAvatar');
+            if (character.avatar) {
+                avatarImg.src = character.avatar;
+                avatarImg.classList.add('active');
+            } else {
+                avatarImg.classList.remove('active');
+            }
+            
+            addMessage(`A conversar com ${character.name}. Diz olá!`, 'system');
+        }
+
+        // ============================================
+        // Event Listeners
+        // ============================================
+        chatForm.addEventListener('submit', handleSubmit);
+        personSelect.addEventListener('change', handleCharacterChange);
+
+        // Initialize
+        handleCharacterChange();
+
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const html = document.documentElement;
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+    </script>
+</body>
+</html>

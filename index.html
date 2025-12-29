@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Tabaibo's Playground">
+    <meta name="theme-color" content="#ffffff">
+    <title>Tabaibo's Playground</title>
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ============================================
+           CSS Custom Properties (Design Tokens)
+           ============================================ */
+        :root {
+            /* Colors */
+            --color-bg: #fafafa;
+            --color-surface: #ffffff;
+            --color-text-primary: #1a1a1a;
+            --color-text-secondary: #666666;
+            --color-text-muted: #999999;
+            --color-border: #e5e5e5;
+            --color-border-hover: #cccccc;
+        }
+
+        [data-theme="dark"] {
+            --color-bg: #0f0f23;
+            --color-surface: #1a1a2e;
+            --color-text-primary: #ffffff;
+            --color-text-secondary: #b2bec3;
+            --color-text-muted: #6c757d;
+            --color-border: #2a2a3e;
+            --color-border-hover: #3a3a4e;
+            
+            /* Accent Colors for Cards */
+            --accent-blue: #4361ee;
+            --accent-purple: #7209b7;
+            --accent-pink: #f72585;
+            --accent-orange: #fb5607;
+            --accent-green: #06d6a0;
+            --accent-yellow: #ffd60a;
+            
+            /* Typography */
+            --font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --font-size-xs: clamp(0.75rem, 1.5vw, 0.875rem);
+            --font-size-sm: clamp(0.875rem, 2vw, 1rem);
+            --font-size-base: clamp(1rem, 2.5vw, 1.125rem);
+            --font-size-lg: clamp(1.25rem, 3vw, 1.5rem);
+            --font-size-xl: clamp(1.5rem, 4vw, 2rem);
+            --font-size-2xl: clamp(2rem, 5vw, 3rem);
+            --font-size-3xl: clamp(2.5rem, 6vw, 4rem);
+            
+            /* Spacing */
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+            --space-2xl: 3rem;
+            --space-3xl: 4rem;
+            --space-4xl: 6rem;
+            
+            /* Layout */
+            --max-width: 1200px;
+            --border-radius-sm: 8px;
+            --border-radius-md: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+            
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-base: 250ms ease;
+            --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+            --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.16);
+        }
+
+        /* ============================================
+           CSS Reset & Base Styles
+           ============================================ */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: var(--font-family);
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+            color: var(--color-text-primary);
+            background-color: var(--color-bg);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        button {
+            font-family: inherit;
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+
+        /* ============================================
+           Layout Components
+           ============================================ */
+        .container {
+            width: 100%;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 var(--space-xl);
+        }
+
+        /* ============================================
+           Header
+           ============================================ */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(250, 250, 250, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--color-border);
+            transition: var(--transition-base);
+        }
+
+        [data-theme="dark"] .header {
+            background: rgba(26, 26, 46, 0.95);
+        }
+
+        .header__inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .header__logo {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--color-text-primary);
+            transition: var(--transition-fast);
+        }
+
+        .header__logo:hover {
+            opacity: 0.7;
+        }
+
+        .header__logo span {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .theme-toggle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            transition: var(--transition-base);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            border-color: var(--accent-blue);
+        }
+
+        /* ============================================
+           Hero Section (neal.fun style)
+           ============================================ */
+        .hero {
+            padding: calc(64px + var(--space-4xl)) var(--space-xl) var(--space-3xl);
+            text-align: center;
+        }
+
+        .hero__title {
+            font-size: var(--font-size-3xl);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: var(--space-lg);
+            color: var(--color-text-primary);
+        }
+
+        .hero__subtitle {
+            font-size: var(--font-size-lg);
+            color: var(--color-text-secondary);
+            max-width: 500px;
+            margin: 0 auto;
+            font-weight: 400;
+        }
+
+        /* ============================================
+           Projects Grid (neal.fun style)
+           ============================================ */
+        .projects {
+            padding: var(--space-2xl) 0 var(--space-4xl);
+        }
+
+        .projects__grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--space-lg);
+        }
+
+        /* ============================================
+           Project Card (neal.fun style - minimal)
+           ============================================ */
+        .project-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            background: var(--color-surface);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid var(--color-border);
+            overflow: hidden;
+            transition: var(--transition-slow);
+            cursor: pointer;
+        }
+
+        .project-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--color-border-hover);
+        }
+
+        .project-card__preview {
+            position: relative;
+            aspect-ratio: 16 / 10;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            background: linear-gradient(135deg, var(--card-color-1, var(--accent-blue)), var(--card-color-2, var(--accent-purple)));
+        }
+
+        .project-card__preview::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, transparent 60%, rgba(0, 0, 0, 0.1));
+            opacity: 0;
+            transition: var(--transition-base);
+        }
+
+        .project-card:hover .project-card__preview::after {
+            opacity: 1;
+        }
+
+        .project-card__content {
+            padding: var(--space-lg);
+        }
+
+        .project-card__title {
+            font-size: var(--font-size-base);
+            font-weight: 600;
+            margin-bottom: var(--space-xs);
+            color: var(--color-text-primary);
+        }
+
+        .project-card__description {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            line-height: 1.5;
+        }
+
+        .project-card__tag {
+            display: inline-block;
+            margin-top: var(--space-md);
+            padding: var(--space-xs) var(--space-sm);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+            color: var(--color-text-muted);
+            background: var(--color-bg);
+            border-radius: var(--border-radius-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Card Color Variations */
+        .project-card[data-theme="blue"] {
+            --card-color-1: #4361ee;
+            --card-color-2: #3a0ca3;
+        }
+
+        .project-card[data-theme="purple"] {
+            --card-color-1: #7209b7;
+            --card-color-2: #560bad;
+        }
+
+        .project-card[data-theme="pink"] {
+            --card-color-1: #f72585;
+            --card-color-2: #b5179e;
+        }
+
+        .project-card[data-theme="orange"] {
+            --card-color-1: #fb5607;
+            --card-color-2: #ff006e;
+        }
+
+        .project-card[data-theme="green"] {
+            --card-color-1: #06d6a0;
+            --card-color-2: #118ab2;
+        }
+
+        .project-card[data-theme="yellow"] {
+            --card-color-1: #ffd60a;
+            --card-color-2: #fb8500;
+        }
+
+        /* ============================================
+           Footer
+           ============================================ */
+        .footer {
+            padding: var(--space-3xl) 0;
+            text-align: center;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .footer__text {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-muted);
+        }
+
+        .footer__heart {
+            color: var(--accent-pink);
+        }
+
+        /* ============================================
+           Animations
+           ============================================ */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .project-card {
+            animation: fadeInUp 0.6s ease backwards;
+        }
+
+        .project-card:nth-child(1) { animation-delay: 0.1s; }
+        .project-card:nth-child(2) { animation-delay: 0.15s; }
+        .project-card:nth-child(3) { animation-delay: 0.2s; }
+        .project-card:nth-child(4) { animation-delay: 0.25s; }
+        .project-card:nth-child(5) { animation-delay: 0.3s; }
+        .project-card:nth-child(6) { animation-delay: 0.35s; }
+
+        /* ============================================
+           Responsive Design
+           ============================================ */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 var(--space-md);
+            }
+
+            .hero {
+                padding-top: calc(64px + var(--space-3xl));
+            }
+
+            .projects__grid {
+                grid-template-columns: 1fr;
+                gap: var(--space-md);
+            }
+        }
+
+        @media (min-width: 1400px) {
+            .projects__grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        /* ============================================
+           Utility Classes
+           ============================================ */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container header__inner">
+            <a href="/" class="header__logo">
+                tabaibo's <span>playground</span>
+            </a>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                <span id="themeIcon">🌙</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1 class="hero__title">Benvindo ao Tabaibo's Playground</h1>
+            <p class="hero__subtitle">"Um homem com um sonho é perigoso, mas um homem com demasiado tempo livre mais perigoso é." -Eu</p>
+        </section>
+
+        <!-- Projects Grid -->
+        <section class="projects">
+            <div class="container">
+                <div class="projects__grid">
+                    <!-- Project 1 -->
+                    <a href="chatpxo/index.html" class="project-card" data-theme="blue">
+                        <div class="project-card__preview">💬</div>
+                        <div class="project-card__content">
+                            <h2 class="project-card__title">ChatPXO</h2>
+                            <p class="project-card__description">Conversa com personagens únicos alimentados por IA.</p>
+                            <span class="project-card__tag">Chat</span>
+                        </div>
+                    </a>
+
+                    <!-- Project 2 -->
+                    <a href="Call of Celso/index.html" class="project-card" data-theme="purple">
+                        <div class="project-card__preview">🔫</div>
+                        <div class="project-card__content">
+                            <h2 class="project-card__title">Call of Celso</h2>
+                            <p class="project-card__description">Jogo de tiro em primeira pessoa com inimigos infinitos.</p>
+                            <span class="project-card__tag">Jogo</span>
+                        </div>
+                    </a>
+
+                    <!-- Project 3 -->
+                    <a href="#" class="project-card" data-theme="pink">
+                        <div class="project-card__preview">🚀</div>
+                        <div class="project-card__content">
+                            <h2 class="project-card__title">Space Shooter</h2>
+                            <p class="project-card__description">Defende a galáxia de ondas infinitas de invasores alienígenas.</p>
+                            <span class="project-card__tag">Jogo</span>
+                        </div>
+                    </a>
+
+                    <!-- Project 4 -->
+                    <a href="#" class="project-card" data-theme="green">
+                        <div class="project-card__preview">📝</div>
+                        <div class="project-card__content">
+                            <h2 class="project-card__title">To-Do List</h2>
+                            <p class="project-card__description">Organiza as tuas tarefas com esta aplicação minimalista.</p>
+                            <span class="project-card__tag">Aplicação</span>
+                        </div>
+                    </a>
+
+                    <!-- Project 5 -->
+                    <a href="#" class="project-card" data-theme="orange">
+                        <div class="project-card__preview">🎨</div>
+                        <div class="project-card__content">
+                            <h2 class="project-card__title">Color Palette</h2>
+                            <p class="project-card__description">Gera e explora paletas de cores harmoniosas.</p>
+                            <span class="project-card__tag">Ferramenta</span>
+                        </div>
+                    </a>
+
+                    <!-- Project 6 - Coming Soon -->
+                    <a href="#" class="project-card" data-theme="yellow" style="opacity: 0.6; pointer-events: none;">
+                        <div class="project-card__preview">✨</div>
+                        <div class="project-card__content">
+                            <h2 class="project-card__title">Em Breve</h2>
+                            <p class="project-card__description">Mais experiências a caminho. Fica atento!</p>
+                            <span class="project-card__tag">Brevemente</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer__text">
+                © 2025 tabaibo's playground · feito com <span class="footer__heart">♥</span>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Minimal JavaScript for interactions -->
+    <script>
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Header scroll effect
+        let lastScroll = 0;
+        const header = document.querySelector('.header');
+
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            
+            if (currentScroll > 100) {
+                header.style.boxShadow = 'var(--shadow-sm)';
+            } else {
+                header.style.boxShadow = 'none';
+            }
+            
+            lastScroll = currentScroll;
+        }, { passive: true });
+
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const html = document.documentElement;
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        html.setAttribute('data-theme', savedTheme);
+        themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+        });
+    </script>
+</body>
+</html>

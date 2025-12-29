@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMULACRA: Damaged Device</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #a855f7;
+            --highlight: #22d3ee;
+            --dark-overlay: rgba(0, 0, 0, 0.7);
+            --app-bg: #111827;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: 
+                radial-gradient(ellipse at top, #1a0a0a 0%, #000000 50%),
+                linear-gradient(180deg, #0d0d0d 0%, #000000 100%);
+            background-color: #000;
+            font-family: 'Roboto', sans-serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* --- Phone Frame --- */
+        #phone-frame {
+            width: 100%;
+            height: 100%;
+            max-width: 420px;
+            max-height: 880px;
+            background: #000;
+            border-radius: 28px;
+            position: relative;
+            box-shadow: 0 0 80px rgba(168, 85, 247, 0.15), 0 30px 60px rgba(0, 0, 0, 0.9);
+            border: 6px solid #222;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        /* --- Overlays (Strictly Non-Interactive) --- */
+        .screen-damage {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none !important;
+            z-index: 900;
+            mix-blend-mode: screen; opacity: 0.4;
+            background-image: url('https://images.unsplash.com/photo-1633512803889-e144d1566495?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover; filter: contrast(1.2) brightness(0.7);
+        }
+
+        .scanlines {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to bottom, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%);
+            background-size: 100% 4px; 
+            pointer-events: none !important;
+            z-index: 800; opacity: 0.2;
+        }
+
+        .glitch-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none !important;
+            z-index: 999; mix-blend-mode: hard-light;
+            opacity: 0; display: none;
+        }
+        .glitch-overlay.active { display: block; animation: glitch-anim 0.2s steps(2) infinite; }
+
+        /* --- UI Elements --- */
+        .status-bar {
+            position: absolute; top: 0; right: 0; width: 100%; height: 32px;
+            display: flex; justify-content: flex-end; align-items: center;
+            padding: 0 16px; color: white; font-size: 11px;
+            z-index: 1000; cursor: pointer;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            transition: background 0.3s;
+        }
+        .status-bar:hover { background: rgba(0,0,0,0.6); }
+
+        #notification-shade {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); backdrop-filter: blur(10px);
+            z-index: 2000; padding-top: 50px;
+            transform: translateY(-100%); transition: transform 0.3s ease-out, visibility 0.3s;
+            visibility: hidden;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        #notification-shade.open { transform: translateY(0); visibility: visible; }
+
+        .nav-bar {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 48px;
+            background: rgba(0,0,0,0.9);
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 5000; color: rgba(255,255,255,0.6); font-size: 18px;
+            transform: translateY(100%); transition: transform 0.3s;
+        }
+        .nav-bar.visible { transform: translateY(0); }
+        .nav-btn:active { color: white; transform: scale(0.9); }
+
+        /* --- Screens --- */
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            background: var(--app-bg);
+            /* Padding for general screens */
+            padding-top: 32px; 
+            padding-bottom: 48px; 
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .screen.hidden { opacity: 0; pointer-events: none; transform: scale(0.95); z-index: 0; }
+        .screen.active { opacity: 1; pointer-events: auto; transform: scale(1); z-index: 10; }
+        
+        #lock-screen { cursor: pointer; }
+
+        .wallpaper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover; background-position: center; z-index: -1;
+        }
+        #lock-bg { background-image: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.9)), url('https://images.unsplash.com/photo-1519638399535-1b036603ac77?q=80&w=1931&auto=format&fit=crop'); }
+        #home-bg { background-image: linear-gradient(to bottom, rgba(20,20,30,0.2), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?q=80&w=1974&auto=format&fit=crop'); }
+
+        #home-screen { background: transparent; padding-top: 0; padding-bottom: 0; }
+        .system-info {
+            padding: 60px 20px 20px;
+            color: rgba(255,255,255,0.4);
+            font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .app-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 20px 10px; padding: 20px; width: 100%;
+            margin-top: auto; padding-bottom: 60px; 
+        }
+        .app-item { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+        .app-icon-box {
+            width: 58px; height: 58px; background: rgba(255,255,255,0.1);
+            border-radius: 14px; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white; box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+            transition: transform 0.1s;
+        }
+        .app-item:active .app-icon-box { transform: scale(0.92); }
+        .app-name { font-size: 10px; color: rgba(255,255,255,0.8); text-transform: uppercase; font-weight: 500; }
+        .notification-badge {
+            position: absolute; top: -4px; right: -4px; background: #ef4444; color: white;
+            font-size: 9px; width: 18px; height: 18px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; border: 2px solid #000; font-weight: bold;
+        }
+
+        /* --- Robust Sub-View Handling --- */
+        /* Used for Chat, Email Details, Notes Editor */
+        .sub-view {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--app-bg); 
+            z-index: 50; /* Higher than everything else */
+            display: flex; flex-direction: column;
+            transform: translateX(100%); transition: transform 0.3s;
+            /* No padding here, handled by internal elements for strict control */
+        }
+        .sub-view.open { transform: translateX(0); }
+
+        /* --- App Header & Content --- */
+        .app-header {
+            padding: 15px 20px;
+            padding-top: 35px; /* Status bar clearance */
+            background: #1f2937;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            border-bottom: 1px solid #374151;
+            flex-shrink: 0;
+        }
+        
+        .app-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            width: 100%;
+        }
+
+        /* --- Chat View Specifics (FIXED) --- */
+        #app-chat-view {
+            position: absolute; inset: 0;
+            background: #111827;
+        }
+        .chat-header-fixed {
+            position: absolute; top: 0; left: 0; width: 100%; height: 60px;
+            background: #1f2937; 
+            display: flex; align-items: center; padding: 0 15px;
+            z-index: 10; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            padding-top: 20px; /* Status bar clearance */
+        }
+        .chat-scroll-area {
+            position: absolute; top: 60px; bottom: 118px; left: 0; width: 100%;
+            overflow-y: auto; padding: 15px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .chat-input-fixed {
+            position: absolute; bottom: 48px; left: 0; width: 100%; height: 70px;
+            background: #1f2937; border-top: 1px solid #374151;
+            display: flex; align-items: center; padding: 0 15px; gap: 10px;
+            z-index: 10;
+        }
+
+        .msg-bubble { 
+            max-width: 80%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; color: white;
+        }
+        .msg-received { background: #374151; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .msg-sent { background: var(--primary); align-self: flex-end; border-bottom-right-radius: 2px; }
+
+        /* --- Gallery Styling (FIXED) --- */
+        .gallery-grid { 
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+            width: 100%;
+            background: #111827;
+        }
+        .gallery-item { 
+            aspect-ratio: 1/1;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            background: #374151;
+        }
+        .gallery-item img { 
+            width: 100%;
+            height: 100%; 
+            object-fit: cover;
+            display: block;
+        }
+        .gallery-item:hover img {
+            opacity: 0.85;
+        }
+        
+        /* Gallery Modal */
+        #gallery-modal {
+            position: fixed; top:0; left:0; width:100%; height:100%; 
+            background: rgba(0,0,0,0.98); z-index: 9999; /* MAX Z-INDEX */
+            display:flex; align-items:center; justify-content:center;
+        }
+        #gallery-modal img { 
+            max-width:90%; max-height:80%; 
+            border: 2px solid #333; box-shadow: 0 0 50px black;
+        }
+
+        /* Other Apps Styling */
+        .chat-item {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .chat-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .tetra-icon {
+            background: linear-gradient(135deg, #ff00cc, #333399) !important;
+            border: 2px solid #fff !important;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 20px !important;
+            text-shadow: 2px 2px 0px #000;
+        }
+        .tetra-name { font-family: 'Press Start 2P', cursive; font-size: 8px !important; color: #ff77ff !important; }
+
+        .list-item {
+            padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; gap: 15px; align-items: center; color: white; cursor: pointer;
+        }
+        .list-item:hover { background: rgba(255,255,255,0.05); }
+        .chat-avatar { width: 40px; height: 40px; border-radius: 50%; background: #444; display:flex; align-items:center; justify-content:center;}
+
+        /* Email */
+        .email-item { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #ccc; cursor: pointer; }
+        .email-subject { color: white; font-weight: bold; margin-bottom: 4px; }
+
+        /* Spark */
+        .spark-card {
+            width: 90%; height: 70%; background: white; border-radius: 20px;
+            overflow: hidden; position: relative; margin: 20px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .spark-actions { display: flex; justify-content: center; gap: 30px; margin-top: 10px; }
+        .spark-btn {
+            width: 60px; height: 60px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 24px;
+            background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.3); cursor: pointer;
+        }
+        .spark-btn:active { transform: scale(0.95); }
+
+        /* Phone Tabs */
+        .phone-tabs { display: flex; border-top: 1px solid #333; }
+        .phone-tab { flex: 1; padding: 15px; text-align: center; color: gray; cursor: pointer; font-size: 18px; }
+        .phone-tab.active { color: var(--highlight); }
+
+        /* Tetris Canvas */
+        canvas { display: block; margin: 0 auto; background: #000; border: 2px solid #333; }
+
+        @keyframes glitch-anim {
+            0% { background: rgba(255,0,0,0.1); transform: translate(3px, -2px); opacity: 0.8; }
+            50% { background: rgba(0,255,255,0.1); transform: translate(-3px, 2px); opacity: 0.8; }
+            100% { background: transparent; transform: translate(0, 0); opacity: 0; }
+        }
+        .animate-shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+    </style>
+</head>
+<body>
+
+    <div id="phone-frame">
+        <div class="screen-damage"></div>
+        <div class="scanlines"></div>
+        <div class="glitch-overlay" id="glitch-layer"></div>
+
+        <div id="notification-shade">
+            <div class="text-white text-center text-sm font-bold pt-4 mb-4">NOTIFICATIONS</div>
+            <div class="mx-4 p-3 bg-gray-800 rounded-lg flex items-center gap-3 border-l-4 border-red-500">
+                <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+                <div>
+                    <div class="text-white text-xs font-bold">System</div>
+                    <div class="text-gray-400 text-[10px]">Corrupted Data Detected</div>
+                </div>
+            </div>
+            <div class="mt-auto mb-8 text-center text-gray-500 text-xs" onclick="toggleShade()">Tap to close</div>
+        </div>
+
+        <div class="status-bar" onclick="toggleShade()">
+            <span class="mr-3"><i class="fa-solid fa-wifi"></i></span>
+            <span class="mr-3"><i class="fa-solid fa-signal"></i></span>
+            <span class="mr-3"><i class="fa-solid fa-battery-three-quarters"></i></span>
+            <span class="font-mono" id="status-clock">00:00</span>
+        </div>
+
+        <div class="nav-bar" id="nav-bar">
+            <div class="nav-btn w-full h-full flex justify-center items-center" onclick="goBack()"><i class="fa-solid fa-chevron-left"></i></div>
+            <div class="nav-btn w-full h-full flex justify-center items-center" onclick="goHome()"><i class="fa-solid fa-circle text-xs"></i></div>
+            <div class="nav-btn w-full h-full flex justify-center items-center"><i class="fa-regular fa-square text-sm"></i></div>
+        </div>
+
+        <!-- LOCK SCREEN -->
+        <div id="lock-screen" class="screen active" onclick="showPinPad()">
+            <div id="lock-bg" class="wallpaper"></div>
+            <div class="mt-16 text-center text-white">
+                <div class="text-7xl font-thin tracking-tighter" id="lock-clock">00:00</div>
+                <div class="text-sm opacity-60 uppercase tracking-widest mt-2">Saturday, Oct 24</div>
+            </div>
+            <div class="mt-auto mb-12 w-full text-center text-[10px] text-white/30 tracking-[0.3em] animate-pulse">
+                TAP TO UNLOCK
+            </div>
+        </div>
+
+        <!-- PIN PAD -->
+        <div id="pin-overlay" class="absolute top-0 left-0 w-full h-full bg-black/90 backdrop-blur-xl z-[1050] flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+            <div class="text-white text-xs tracking-[0.4em] mb-10 opacity-60">SYSTEM ENCRYPTED</div>
+            <div class="pin-dots flex gap-5 mb-12">
+                <div class="pin-dot w-3 h-3 border-2 border-white/30 rounded-full transition-all" id="dot-1"></div>
+                <div class="pin-dot w-3 h-3 border-2 border-white/30 rounded-full transition-all" id="dot-2"></div>
+                <div class="pin-dot w-3 h-3 border-2 border-white/30 rounded-full transition-all" id="dot-3"></div>
+                <div class="pin-dot w-3 h-3 border-2 border-white/30 rounded-full transition-all" id="dot-4"></div>
+            </div>
+            <div class="grid grid-cols-3 gap-6 w-64">
+                <div class="key w-16 h-16 rounded-full border border-white/10 flex items-center justify-center text-2xl text-white cursor-pointer active:bg-white/20" onclick="pressKey('1')">1</div>
+                <div class="key w-16 h-16 rounded-full border border-white/10 flex items-center justify-center text-2xl text-white cursor-pointer active:bg-white/20" onclick="pressKey('2')">2</div>
+                <div class="key w-16 h-16 rounded-full border border-white/10 flex items-center justify-center text-2xl text-white cursor-pointer active:bg-white/20" onclick="pressKey('3')">3</div>
+                <div class="key w-16 h-16 rounded-full border border-white/10 flex items-center justify-center text-2xl text-white cursor-pointer active:bg-white/20" onclick="pressKey('4')">4</div>
+                <div class="key w-16 h-16 rounded-full border border-white/10 flex items-center justify-center text-2xl text-white cursor-pointer active:bg-white/20" onclick="pressKey('5')">5</div>
+                <div class="key w-16 h-16 rounded-full border border-white/10 flex items-center justify-center text-2xl text-white cursor-pointer active:bg-white/20" onclick="pressKey('6')">6</div>
+                <div class="key w-16 h-16 rounded-full border border-white/10 flex items-center justify-center text-2xl text-white cursor-pointer active:bg-white/20" onclick="pressKey('7')">7</div>
+                <div class="key w-16 h-16 rounded-full border border-white/10 flex items-center justify-center text-2xl text-white cursor-pointer active:bg-white/20" onclick="pressKey('8')">8</div>
+                <div class="key w-16 h-16 rounded-full border border-white/10 flex items-center justify-center text-2xl text-white cursor-pointer active:bg-white/20" onclick="pressKey('9')">9</div>
+                <div class="key w-16 h-16 flex items-center justify-center text-[10px] text-white cursor-pointer" onclick="cancelPin()">CANCEL</div>
+                <div class="key w-16 h-16 rounded-full border border-white/10 flex items-center justify-center text-2xl text-white cursor-pointer active:bg-white/20" onclick="pressKey('0')">0</div>
+                <div class="key w-16 h-16 flex items-center justify-center text-sm text-white cursor-pointer" onclick="backspacePin()"><i class="fa-solid fa-delete-left"></i></div>
+            </div>
+        </div>
+
+        <!-- HOME SCREEN -->
+        <div id="home-screen" class="screen hidden">
+            <div id="home-bg" class="wallpaper"></div>
+            <div class="system-info">
+                <div>IRIS OS v4.2.0</div>
+                <div class="opacity-50 mt-1">Status: Unstable</div>
+            </div>
+            <div class="app-grid">
+                <div class="app-item" onclick="openApp('app-phone')">
+                    <div class="app-icon-box bg-green-800/80"><i class="fa-solid fa-phone"></i></div>
+                    <span class="app-name">Phone</span>
+                </div>
+                <div class="app-item" onclick="openApp('app-messages')">
+                    <div class="app-icon-box bg-emerald-700/80"><i class="fa-solid fa-comment-sms"></i><div class="notification-badge">3</div></div>
+                    <span class="app-name">Chat</span>
+                </div>
+                <div class="app-item" onclick="openApp('app-gallery')">
+                    <div class="app-icon-box bg-orange-700/80"><i class="fa-solid fa-images"></i></div>
+                    <span class="app-name">Gallery</span>
+                </div>
+                <div class="app-item" onclick="openApp('app-browser')">
+                    <div class="app-icon-box bg-blue-700/80"><i class="fa-solid fa-earth-americas"></i></div>
+                    <span class="app-name">Web</span>
+                </div>
+                <div class="app-item" onclick="openApp('app-email')">
+                    <div class="app-icon-box bg-indigo-800/80"><i class="fa-solid fa-envelope"></i><div class="notification-badge">1</div></div>
+                    <span class="app-name">Mail</span>
+                </div>
+                <div class="app-item" onclick="openApp('app-notes')">
+                    <div class="app-icon-box bg-amber-600/80"><i class="fa-solid fa-note-sticky"></i></div>
+                    <span class="app-name">Notes</span>
+                </div>
+                <div class="app-item" onclick="openApp('app-spark')">
+                    <div class="app-icon-box bg-rose-700/80"><i class="fa-solid fa-fire"></i></div>
+                    <span class="app-name">Spark</span>
+                </div>
+                <div class="app-item" onclick="openApp('app-tetra')">
+                    <div class="app-icon-box tetra-icon"><i class="fa-solid fa-gamepad"></i></div>
+                    <span class="app-name tetra-name">TETRA</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= APP: PHONE ================= -->
+        <div id="app-phone" class="screen hidden bg-gray-900">
+            <!-- Tabs Content -->
+            <div id="phone-tab-keypad" class="flex-1 flex flex-col justify-end pb-4">
+                <div class="text-white text-4xl text-center mb-8 font-light" id="dial-display"></div>
+                <div class="grid grid-cols-3 gap-4 px-10 mb-6">
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('1')">1</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('2')">2</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('3')">3</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('4')">4</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('5')">5</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('6')">6</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('7')">7</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('8')">8</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('9')">9</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('*')">*</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('0')">0</div>
+                    <div class="h-14 rounded-full bg-gray-800 flex items-center justify-center text-white text-xl" onclick="dial('#')">#</div>
+                </div>
+                <div class="flex justify-center"><div class="h-14 w-14 bg-green-600 rounded-full flex items-center justify-center text-white text-xl shadow-lg"><i class="fa-solid fa-phone"></i></div></div>
+            </div>
+
+            <div id="phone-tab-recents" class="flex-1 hidden overflow-y-auto">
+                <div class="app-header">Recents</div>
+                <div class="list-item">
+                    <div class="chat-avatar text-white bg-red-500"><i class="fa-solid fa-phone-slash"></i></div>
+                    <div class="flex-1">
+                        <div class="text-white text-sm font-bold text-red-400">Anna</div>
+                        <div class="text-gray-500 text-xs">Missed Call • 10:42 PM</div>
+                    </div>
+                </div>
+                <div class="list-item">
+                    <div class="chat-avatar text-white bg-red-500"><i class="fa-solid fa-phone-slash"></i></div>
+                    <div class="flex-1">
+                        <div class="text-white text-sm font-bold text-red-400">Unknown</div>
+                        <div class="text-gray-500 text-xs">Missed Call • Yesterday</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="phone-tab-contacts" class="flex-1 hidden overflow-y-auto">
+                <div class="app-header">Contacts</div>
+                <div class="list-item">
+                    <div class="chat-avatar bg-purple-500 text-white">A</div>
+                    <div class="text-white font-bold">Anna</div>
+                </div>
+                <div class="list-item">
+                    <div class="chat-avatar bg-blue-500 text-white">J</div>
+                    <div class="text-white font-bold">Jeff</div>
+                </div>
+                <div class="list-item">
+                    <div class="chat-avatar bg-gray-600 text-white">M</div>
+                    <div class="text-white font-bold">Mom</div>
+                </div>
+            </div>
+
+            <div class="phone-tabs bg-gray-900">
+                <div class="phone-tab active" onclick="switchPhoneTab('keypad', this)"><i class="fa-solid fa-table-cells"></i></div>
+                <div class="phone-tab" onclick="switchPhoneTab('recents', this)"><i class="fa-solid fa-clock"></i></div>
+                <div class="phone-tab" onclick="switchPhoneTab('contacts', this)"><i class="fa-solid fa-user-group"></i></div>
+            </div>
+        </div>
+
+        <!-- ================= APP: MESSAGES ================= -->
+        <div id="app-messages" class="screen hidden bg-gray-900">
+            <div class="app-header"><span class="text-xl font-bold">Messages</span></div>
+            <div class="app-content">
+                <div class="chat-item" onclick="openChatView('Anna')">
+                    <div class="chat-avatar bg-purple-500 text-white">A</div>
+                    <div class="flex-1">
+                        <div class="flex justify-between"><span class="font-bold text-sm">Anna</span><span class="text-xs text-gray-500">2m</span></div>
+                        <div class="text-xs text-gray-400">Where are you? Please pick up...</div>
+                    </div>
+                    <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                </div>
+                <div class="chat-item">
+                    <div class="chat-avatar bg-blue-500 text-white">J</div>
+                    <div class="flex-1">
+                        <div class="flex justify-between"><span class="font-bold text-sm">Jeff</span><span class="text-xs text-gray-500">1h</span></div>
+                        <div class="text-xs text-gray-400">Did you send the files?</div>
+                    </div>
+                </div>
+                <div class="chat-item">
+                    <div class="chat-avatar bg-gray-700 text-white"><i class="fa-solid fa-user-secret"></i></div>
+                    <div class="flex-1">
+                        <div class="flex justify-between"><span class="font-bold text-sm">Unknown</span><span class="text-xs text-gray-500">Yesterday</span></div>
+                        <div class="text-xs text-gray-400">I know what you did.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat View Sub-screen (FIXED STRUCTURE) -->
+        <div id="app-chat-view" class="sub-view">
+            <!-- Fixed Header -->
+            <div class="chat-header-fixed">
+                <i class="fa-solid fa-arrow-left mr-4 cursor-pointer text-gray-300 hover:text-white" onclick="closeChatView()"></i>
+                <div class="chat-avatar w-8 h-8 bg-purple-500 text-xs mr-2 text-white">A</div>
+                <span class="text-white font-bold">Anna</span>
+            </div>
+            
+            <!-- Scrolling Message Area -->
+            <div class="chat-scroll-area">
+                <div class="msg-received msg-bubble">Hey?</div>
+                <div class="msg-received msg-bubble">Are you okay?</div>
+                <div class="msg-sent msg-bubble">I'm fine. Just busy.</div>
+                <div class="msg-received msg-bubble">Where are you? Please pick up...</div>
+                <div class="msg-received msg-bubble">I know you're seeing this.</div>
+            </div>
+            
+            <!-- Fixed Input Bar -->
+            <div class="chat-input-fixed">
+                <input type="text" placeholder="Type a message..." class="flex-1 bg-gray-700 rounded-full px-4 text-sm text-white border-none outline-none focus:ring-1 focus:ring-purple-500 h-10">
+                <button class="text-blue-400 hover:text-blue-300 w-10 h-10 flex items-center justify-center bg-gray-700 rounded-full"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+
+        <!-- ================= APP: GALLERY ================= -->
+        <div id="app-gallery" class="screen hidden" style="background: #111827;">
+            <div class="app-header">Gallery</div>
+            <div class="gallery-grid" style="padding: 4px; overflow-y: auto; flex: 1;">
+                <div class="gallery-item" onclick="openImage(this)">
+                    <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400" alt="">
+                </div>
+                <div class="gallery-item" onclick="openImage(this)">
+                    <img src="https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=400" alt="">
+                </div>
+                <div class="gallery-item" onclick="openImage(this)">
+                    <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400" alt="">
+                </div>
+                <div class="gallery-item" onclick="openImage(this)">
+                    <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400" alt="">
+                </div>
+                <div class="gallery-item" onclick="openImage(this)">
+                    <img src="https://images.unsplash.com/photo-1501854140884-074cf2b2c75d?w=400" alt="">
+                </div>
+                <div class="gallery-item" onclick="openImage(this)">
+                    <img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400" alt="">
+                </div>
+                <div class="gallery-item" onclick="openImage(this)">
+                    <img src="https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=400" alt="">
+                </div>
+                <div class="gallery-item" onclick="openImage(this)">
+                    <img src="https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=400" alt="">
+                </div>
+                <div class="gallery-item" onclick="openImage(this)">
+                    <img src="https://images.unsplash.com/photo-1500534623283-312aade485b7?w=400" alt="">
+                </div>
+            </div>
+            
+            <!-- Lightbox -->
+            <div id="gallery-modal" class="hidden" onclick="this.classList.add('hidden')">
+                <img id="gallery-modal-img" src="">
+            </div>
+        </div>
+
+        <!-- ================= APP: TAVOBROWSER ================= -->
+        <div id="app-browser" class="screen hidden bg-white text-black">
+            <div class="p-2 bg-gray-100 border-b flex items-center gap-2 text-xs text-gray-600">
+                <i class="fa-solid fa-lock text-green-600"></i>
+                <span class="font-mono">tavosearch.com</span>
+            </div>
+            <div class="flex-1 flex flex-col items-center justify-center p-8">
+                <div class="text-3xl font-bold text-indigo-600 mb-6 flex gap-2 items-center">
+                    <i class="fa-solid fa-globe"></i> TavoSearch
+                </div>
+                <input type="text" placeholder="Search the web..." class="w-full h-10 border rounded-full px-4 text-sm shadow-inner mb-4 outline-none focus:border-indigo-500" onkeydown="handleBrowserSearch(event)">
+                <div id="browser-error" class="text-xs text-red-500 hidden font-bold mt-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i> NO NETWORK CONNECTION
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= APP: EMAIL ================= -->
+        <div id="app-email" class="screen hidden bg-gray-900">
+            <div class="app-header bg-indigo-900">Inbox (1)</div>
+            <div class="app-content">
+                <div class="email-item bg-gray-800/50 border-l-4 border-blue-500" onclick="openEmail(0)">
+                    <div class="flex justify-between text-xs text-gray-400 mb-1"><span>HR Department</span><span>10:00 AM</span></div>
+                    <div class="email-subject">Urgent: Account Access</div>
+                    <div class="text-xs text-gray-500 truncate">We detected unusual activity on your account. Please verify...</div>
+                </div>
+                <div class="email-item" onclick="openEmail(1)">
+                    <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Netflix</span><span>Yesterday</span></div>
+                    <div class="email-subject">Coming Soon</div>
+                    <div class="text-xs text-gray-500 truncate">See what's next this month on Netflix.</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Email Read View -->
+        <div id="app-email-view" class="sub-view bg-white text-black" style="padding-top: 50px;">
+             <div class="p-4 border-b flex items-center gap-3">
+                 <i class="fa-solid fa-arrow-left text-gray-600 cursor-pointer" onclick="closeEmailView()"></i>
+                 <div class="font-bold text-lg">Read Mail</div>
+             </div>
+             <div class="p-4">
+                 <div class="font-bold text-xl mb-1" id="email-view-subject">Subject</div>
+                 <div class="text-sm text-gray-500 mb-4" id="email-view-sender">Sender</div>
+                 <div class="text-sm leading-relaxed" id="email-view-body">Body</div>
+             </div>
+        </div>
+
+        <!-- ================= APP: NOTES ================= -->
+        <div id="app-notes" class="screen hidden bg-amber-50 text-gray-800">
+            <div class="app-header bg-amber-200 text-amber-900 flex justify-between">
+                <span>Notes</span>
+            </div>
+            <div class="app-content p-4" id="notes-list">
+                <!-- Notes injected via JS -->
+            </div>
+            <!-- FAB -->
+            <div class="absolute bottom-16 right-6 w-14 h-14 bg-amber-500 rounded-full shadow-lg flex items-center justify-center text-white text-2xl cursor-pointer hover:scale-110 transition" onclick="openNoteEditor()">
+                <i class="fa-solid fa-plus"></i>
+            </div>
+        </div>
+
+        <!-- Note Editor -->
+        <div id="app-notes-editor" class="sub-view bg-amber-50" style="padding-top: 50px;">
+             <div class="app-header bg-amber-200 text-amber-900 flex justify-between">
+                 <i class="fa-solid fa-arrow-left cursor-pointer" onclick="closeNoteEditor()"></i>
+                 <span class="font-bold cursor-pointer" onclick="saveNote()">SAVE</span>
+             </div>
+             <div class="p-4 flex flex-col h-full">
+                 <input id="note-input-title" class="bg-transparent text-xl font-bold mb-4 outline-none placeholder-amber-800/50" placeholder="Title">
+                 <textarea id="note-input-body" class="bg-transparent flex-1 resize-none outline-none placeholder-amber-800/50" placeholder="Type something..."></textarea>
+             </div>
+        </div>
+
+        <!-- ================= APP: SPARK ================= -->
+        <div id="app-spark" class="screen hidden bg-gray-100">
+            <div class="absolute top-8 left-0 w-full flex justify-center py-2 z-10">
+                <i class="fa-solid fa-fire text-rose-500 text-2xl"></i>
+            </div>
+            
+            <div class="app-content flex items-center justify-center">
+                 <div id="spark-deck" class="relative w-full h-full flex items-center justify-center">
+                     <!-- Cards injected via JS -->
+                     <div id="spark-card-container" class="spark-card relative shadow-2xl">
+                         <img id="spark-img" src="" class="w-full h-full object-cover">
+                         <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/90 to-transparent p-5 text-white">
+                             <div class="text-2xl font-bold"><span id="spark-name">Name</span>, <span id="spark-age">20</span></div>
+                             <div class="text-sm opacity-90"><i class="fa-solid fa-location-dot"></i> <span id="spark-dist">2</span> miles away</div>
+                             <div class="text-xs mt-1 opacity-80" id="spark-bio">Bio...</div>
+                         </div>
+                         <!-- Overlay for empty state -->
+                         <div id="spark-empty" class="absolute inset-0 bg-white hidden flex-col items-center justify-center text-center p-6">
+                             <div class="text-gray-400 text-4xl mb-4"><i class="fa-solid fa-magnifying-glass"></i></div>
+                             <div class="text-gray-500 font-bold">No more profiles nearby.</div>
+                         </div>
+                     </div>
+                 </div>
+            </div>
+
+            <div class="spark-actions pb-10">
+                <div class="spark-btn text-red-500 hover:scale-110 transition" onclick="swipeSpark('left')"><i class="fa-solid fa-xmark"></i></div>
+                <div class="spark-btn text-blue-500 hover:scale-110 transition"><i class="fa-solid fa-star"></i></div>
+                <div class="spark-btn text-green-500 hover:scale-110 transition" onclick="swipeSpark('right')"><i class="fa-solid fa-heart"></i></div>
+            </div>
+        </div>
+
+        <!-- ================= APP: TETRA (Tetris Clone) ================= -->
+        <div id="app-tetra" class="screen hidden bg-black flex flex-col items-center">
+            <div class="w-full p-2 bg-gray-900 border-b border-gray-700 flex justify-between items-center px-4">
+                 <span class="tetra-name text-xs text-white">TETRA</span>
+                 <span class="font-mono text-yellow-400 text-sm" id="tetris-score">0000</span>
+            </div>
+            
+            <div class="flex-1 w-full flex items-center justify-center bg-gray-800 relative">
+                <canvas id="tetris-canvas" width="240" height="400"></canvas>
+                
+                <!-- Game Over Overlay -->
+                <div id="tetris-gameover" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center hidden">
+                    <div class="text-red-500 font-bold mb-4 font-mono">GAME OVER</div>
+                    <button class="px-4 py-2 bg-white text-black font-bold text-xs rounded" onclick="resetTetris()">RETRY</button>
+                </div>
+                 <!-- Start Overlay -->
+                <div id="tetris-start" class="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-10">
+                    <div class="text-purple-400 font-bold mb-4 font-mono text-2xl">TETRA</div>
+                    <button class="px-4 py-2 bg-purple-600 text-white font-bold text-xs rounded animate-pulse" onclick="startTetris()">START</button>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="w-full h-32 bg-gray-900 grid grid-cols-3 gap-2 p-2">
+                 <div class="flex items-center justify-center bg-gray-800 rounded active:bg-gray-700 text-white text-2xl" onclick="tetrisMove(-1)"><i class="fa-solid fa-caret-left"></i></div>
+                 <div class="flex items-center justify-center bg-gray-800 rounded active:bg-gray-700 text-white text-2xl" onclick="tetrisRotate()"><i class="fa-solid fa-rotate-right"></i></div>
+                 <div class="flex items-center justify-center bg-gray-800 rounded active:bg-gray-700 text-white text-2xl" onclick="tetrisMove(1)"><i class="fa-solid fa-caret-right"></i></div>
+                 
+                 <div class="col-span-3 flex items-center justify-center bg-gray-800 rounded active:bg-gray-700 text-white h-10 mt-1" onclick="tetrisDrop()"><i class="fa-solid fa-arrow-down"></i></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Core Systems ---
+        const CORRECT_PIN = "0451";
+        let currentPin = "";
+        let activeApp = null;
+        
+        // --- DOM Elements ---
+        const lockScreen = document.getElementById('lock-screen');
+        const pinOverlay = document.getElementById('pin-overlay');
+        const homeScreen = document.getElementById('home-screen');
+        const navBar = document.getElementById('nav-bar');
+        const notificationShade = document.getElementById('notification-shade');
+        const glitchLayer = document.getElementById('glitch-layer');
+        const dots = [1,2,3,4].map(i => document.getElementById('dot-'+i));
+
+        // --- Clock ---
+        setInterval(() => {
+            const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+            document.getElementById('status-clock').innerText = t;
+            document.getElementById('lock-clock').innerText = t;
+        }, 1000);
+
+        // --- Lock Screen ---
+        function showPinPad() { 
+            pinOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            pinOverlay.classList.add('opacity-100', 'pointer-events-auto');
+        }
+        function cancelPin() { 
+            currentPin = ""; updateDots(); 
+            pinOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+            pinOverlay.classList.add('opacity-0', 'pointer-events-none');
+        }
+        function backspacePin() { if(currentPin.length) { currentPin = currentPin.slice(0,-1); updateDots(); } }
+        function pressKey(k) { if(currentPin.length < 4) { currentPin+=k; updateDots(); if(currentPin.length===4) setTimeout(checkPin,200); } }
+        function updateDots() {
+            dots.forEach((d,i) => {
+                if(i<currentPin.length) { d.classList.remove('border-white/30'); d.classList.add('bg-white', 'border-white', 'shadow-[0_0_10px_white]'); }
+                else { d.classList.add('border-white/30'); d.classList.remove('bg-white', 'border-white', 'shadow-[0_0_10px_white]'); }
+            });
+        }
+        function checkPin() {
+            if(currentPin===CORRECT_PIN) {
+                triggerGlitch();
+                pinOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+                pinOverlay.classList.add('opacity-0', 'pointer-events-none');
+                lockScreen.classList.remove('active'); lockScreen.classList.add('hidden');
+                homeScreen.classList.remove('hidden'); homeScreen.classList.add('active');
+            } else {
+                currentPin=""; updateDots();
+            }
+        }
+
+        // --- Navigation ---
+        window.openApp = function(id) {
+            triggerGlitch(100);
+            homeScreen.classList.remove('active'); homeScreen.classList.add('hidden');
+            const app = document.getElementById(id);
+            if(app) { app.classList.remove('hidden'); app.classList.add('active'); activeApp=app; navBar.classList.add('visible'); }
+        };
+        window.goHome = function() {
+            if(activeApp) {
+                activeApp.classList.remove('active'); activeApp.classList.add('hidden');
+                // Close all subviews
+                document.querySelectorAll('.sub-view').forEach(el => el.classList.remove('open'));
+                // Pause Tetris if open
+                if(activeApp.id === 'app-tetra') stopTetris();
+                activeApp = null;
+            }
+            homeScreen.classList.remove('hidden'); homeScreen.classList.add('active');
+            navBar.classList.remove('visible');
+        };
+        window.goBack = function() {
+            // Check for open sub-views first
+            const openSub = document.querySelector('.sub-view.open');
+            if(openSub) {
+                openSub.classList.remove('open');
+            } else {
+                goHome();
+            }
+        };
+        window.toggleShade = function() { notificationShade.classList.toggle('open'); };
+        function triggerGlitch(d=300) { glitchLayer.classList.add('active'); setTimeout(()=>glitchLayer.classList.remove('active'),d); }
+
+        // --- APP LOGIC: PHONE ---
+        window.switchPhoneTab = function(tabName, el) {
+            document.querySelectorAll('.phone-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('phone-tab-keypad').classList.add('hidden');
+            document.getElementById('phone-tab-recents').classList.add('hidden');
+            document.getElementById('phone-tab-contacts').classList.add('hidden');
+            document.getElementById('phone-tab-'+tabName).classList.remove('hidden');
+        };
+        window.dial = function(n) { const d = document.getElementById('dial-display'); if(d.innerText.length<12) d.innerText+=n; };
+
+        // --- APP LOGIC: MESSAGES ---
+        window.openChatView = function() { document.getElementById('app-chat-view').classList.add('open'); };
+        window.closeChatView = function() { document.getElementById('app-chat-view').classList.remove('open'); };
+
+        // --- APP LOGIC: GALLERY ---
+        window.openImage = function(el) {
+            const img = el.querySelector('img');
+            const modal = document.getElementById('gallery-modal');
+            const modalImg = document.getElementById('gallery-modal-img');
+            
+            // Only use if image is valid (displayed)
+            if(img && img.style.display !== 'none') {
+                modalImg.src = img.src;
+                modal.classList.remove('hidden');
+            }
+        };
+
+        // --- APP LOGIC: BROWSER ---
+        window.handleBrowserSearch = function(e) {
+            if(e.key === 'Enter') {
+                document.getElementById('browser-error').classList.remove('hidden');
+            }
+        };
+
+        // --- APP LOGIC: EMAIL ---
+        const emails = [
+            { subject: "Urgent: Account Access", sender: "HR Dept", body: "We noticed an unusual login attempt from an unrecognized device located in Minsk. Please confirm your identity immediately by clicking the link below." },
+            { subject: "Coming Soon", sender: "Netflix", body: "Don't miss the new season of Stranger Things! It's going to be upside down." }
+        ];
+        window.openEmail = function(idx) {
+            const email = emails[idx];
+            document.getElementById('email-view-subject').innerText = email.subject;
+            document.getElementById('email-view-sender').innerText = email.sender;
+            document.getElementById('email-view-body').innerText = email.body;
+            document.getElementById('app-email-view').classList.add('open');
+        };
+        window.closeEmailView = function() { document.getElementById('app-email-view').classList.remove('open'); };
+
+        // --- APP LOGIC: NOTES ---
+        let notes = [
+            { title: "Groceries", body: "- Milk\n- Eggs\n- Bread" },
+            { title: "Door Code", body: "0-4-5-1" }
+        ];
+        let currentNoteIndex = -1;
+
+        function renderNotes() {
+            const container = document.getElementById('notes-list');
+            container.innerHTML = "";
+            notes.forEach((n, i) => {
+                const div = document.createElement('div');
+                div.className = "bg-white p-4 rounded shadow mb-4 cursor-pointer";
+                div.innerHTML = `<div class="font-bold text-sm mb-2">${n.title}</div><div class="text-xs text-gray-600 truncate">${n.body}</div>`;
+                div.onclick = () => editNote(i);
+                container.appendChild(div);
+            });
+        }
+        window.openNoteEditor = function() {
+            currentNoteIndex = -1;
+            document.getElementById('note-input-title').value = "";
+            document.getElementById('note-input-body').value = "";
+            document.getElementById('app-notes-editor').classList.add('open');
+        };
+        window.editNote = function(i) {
+            currentNoteIndex = i;
+            document.getElementById('note-input-title').value = notes[i].title;
+            document.getElementById('note-input-body').value = notes[i].body;
+            document.getElementById('app-notes-editor').classList.add('open');
+        };
+        window.saveNote = function() {
+            const title = document.getElementById('note-input-title').value || "Untitled";
+            const body = document.getElementById('note-input-body').value;
+            if(currentNoteIndex === -1) {
+                notes.push({ title, body });
+            } else {
+                notes[currentNoteIndex] = { title, body };
+            }
+            renderNotes();
+            closeNoteEditor();
+        };
+        window.closeNoteEditor = function() { document.getElementById('app-notes-editor').classList.remove('open'); };
+        renderNotes();
+
+        // --- APP LOGIC: SPARK ---
+        const profiles = [
+            { name: "Sarah", age: 24, dist: 2, bio: "Digital artist. Looking for my muse.", img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=600" },
+            { name: "Mike", age: 27, dist: 5, bio: "Gym rat. Protein shakes are life.", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=600" },
+            { name: "Jessica", age: 22, dist: 1, bio: "Just moved here!", img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=600" }
+        ];
+        let sparkIndex = 0;
+        
+        function renderSpark() {
+            if(sparkIndex >= profiles.length) {
+                document.getElementById('spark-empty').classList.remove('hidden');
+                return;
+            }
+            const profile = profiles[sparkIndex];
+            document.getElementById('spark-name').innerText = profile.name;
+            document.getElementById('spark-age').innerText = profile.age;
+            document.getElementById('spark-dist').innerText = profile.dist;
+            document.getElementById('spark-bio').innerText = profile.bio;
+            document.getElementById('spark-img').src = profile.img;
+        }
+        window.swipeSpark = function(dir) {
+            sparkIndex++;
+            renderSpark();
+        };
+        renderSpark();
+
+        // --- APP LOGIC: TETRA (Tetris) ---
+        const canvas = document.getElementById('tetris-canvas');
+        const ctx = canvas.getContext('2d');
+        const ROW = 20; const COL = 10; const SQ = 20; // 20px squares
+        const VACANT = "#111827"; // Board bg color
+        
+        let board = [];
+        let score = 0;
+        let gameRunning = false;
+        let dropStart = Date.now();
+        let gameOver = false;
+
+        // Draw a square
+        function drawSquare(x,y,color){
+            ctx.fillStyle = color;
+            ctx.fillRect(x*SQ,y*SQ,SQ,SQ);
+            ctx.strokeStyle = "#333";
+            ctx.strokeRect(x*SQ,y*SQ,SQ,SQ);
+        }
+
+        // Create board
+        function createBoard() {
+            for(let r=0; r<ROW; r++){
+                board[r] = [];
+                for(let c=0; c<COL; c++){
+                    board[r][c] = VACANT;
+                }
+            }
+        }
+        
+        function drawBoard(){
+            for(let r=0; r<ROW; r++){
+                for(let c=0; c<COL; c++){
+                    drawSquare(c,r,board[r][c]);
+                }
+            }
+        }
+
+        // The tetrominoes
+        const tetro_I = [[ [0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0] ], [ [0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0] ], [ [0, 0, 0, 0], [0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0] ], [ [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0] ]];
+        const tetro_J = [[ [1, 0, 0], [1, 1, 1], [0, 0, 0] ], [ [0, 1, 1], [0, 1, 0], [0, 1, 0] ], [ [0, 0, 0], [1, 1, 1], [0, 0, 1] ], [ [0, 1, 0], [0, 1, 0], [1, 1, 0] ]];
+        const tetro_L = [[ [0, 0, 1], [1, 1, 1], [0, 0, 0] ], [ [0, 1, 0], [0, 1, 0], [0, 1, 1] ], [ [0, 0, 0], [1, 1, 1], [1, 0, 0] ], [ [1, 1, 0], [0, 1, 0], [0, 1, 0] ]];
+        const tetro_O = [[ [0, 0, 0, 0], [0, 1, 1, 0], [0, 1, 1, 0], [0, 0, 0, 0] ]];
+        const tetro_S = [[ [0, 1, 1], [1, 1, 0], [0, 0, 0] ], [ [0, 1, 0], [0, 1, 1], [0, 0, 1] ], [ [0, 0, 0], [0, 1, 1], [1, 1, 0] ], [ [1, 0, 0], [1, 1, 0], [0, 1, 0] ]];
+        const tetro_T = [[ [0, 1, 0], [1, 1, 1], [0, 0, 0] ], [ [0, 1, 0], [0, 1, 1], [0, 1, 0] ], [ [0, 0, 0], [1, 1, 1], [0, 1, 0] ], [ [0, 1, 0], [1, 1, 0], [0, 1, 0] ]];
+        const tetro_Z = [[ [1, 1, 0], [0, 1, 1], [0, 0, 0] ], [ [0, 0, 1], [0, 1, 1], [0, 1, 0] ], [ [0, 0, 0], [1, 1, 0], [0, 1, 1] ], [ [0, 1, 0], [1, 1, 0], [1, 0, 0] ]];
+
+        // Pieces - Defined AFTER shapes
+        const PIECES = [
+            [tetro_Z,"red"], [tetro_S,"green"], [tetro_T,"purple"], [tetro_O,"yellow"], [tetro_L,"orange"], [tetro_I,"cyan"], [tetro_J,"blue"]
+        ];
+
+        // Piece Object
+        let activeTetrisPiece; 
+        
+        class Piece {
+            constructor(tetromino, color){
+                this.tetromino = tetromino;
+                this.color = color;
+                this.tetrominoN = 0; // rotation index
+                this.activeTetromino = this.tetromino[this.tetrominoN];
+                this.x = 3;
+                this.y = -2;
+            }
+            fill(color){
+                for(let r=0; r<this.activeTetromino.length; r++){
+                    for(let c=0; c<this.activeTetromino.length; c++){
+                        if(this.activeTetromino[r][c]){
+                            drawSquare(this.x + c, this.y + r, color);
+                        }
+                    }
+                }
+            }
+            draw(){ this.fill(this.color); }
+            unDraw(){ this.fill(VACANT); }
+            moveDown(){
+                if(!this.collision(0,1,this.activeTetromino)){
+                    this.unDraw();
+                    this.y++;
+                    this.draw();
+                }else{
+                    this.lock();
+                    activeTetrisPiece = randomPiece();
+                }
+            }
+            moveRight(){
+                if(!this.collision(1,0,this.activeTetromino)){
+                    this.unDraw(); this.x++; this.draw();
+                }
+            }
+            moveLeft(){
+                if(!this.collision(-1,0,this.activeTetromino)){
+                    this.unDraw(); this.x--; this.draw();
+                }
+            }
+            rotate(){
+                let nextPattern = this.tetromino[(this.tetrominoN + 1)%this.tetromino.length];
+                let kick = 0;
+                if(this.collision(0,0,nextPattern)){
+                    if(this.x > COL/2){ kick = -1; } else { kick = 1; }
+                }
+                if(!this.collision(kick,0,nextPattern)){
+                    this.unDraw();
+                    this.x += kick;
+                    this.tetrominoN = (this.tetrominoN + 1)%this.tetromino.length;
+                    this.activeTetromino = this.tetromino[this.tetrominoN];
+                    this.draw();
+                }
+            }
+            lock(){
+                for(let r=0; r<this.activeTetromino.length; r++){
+                    for(let c=0; c<this.activeTetromino.length; c++){
+                        if(!this.activeTetromino[r][c]){ continue; }
+                        if(this.y + r < 0){
+                            gameOver = true;
+                            document.getElementById('tetris-gameover').classList.remove('hidden');
+                            gameRunning = false;
+                            break;
+                        }
+                        board[this.y+r][this.x+c] = this.color;
+                    }
+                }
+                // Remove full rows
+                for(let r=0; r<ROW; r++){
+                    let isRowFull = true;
+                    for(let c=0; c<COL; c++){
+                        if(board[r][c] == VACANT){ isRowFull = false; break; }
+                    }
+                    if(isRowFull){
+                        score += 10;
+                        document.getElementById('tetris-score').innerText = score;
+                        for(let y=r; y>1; y--){
+                            for(let c=0; c<COL; c++){
+                                board[y][c] = board[y-1][c];
+                            }
+                        }
+                        for(let c=0; c<COL; c++){ board[0][c] = VACANT; }
+                    }
+                }
+                drawBoard();
+            }
+            collision(x,y,piece){
+                for(let r=0; r<piece.length; r++){
+                    for(let c=0; c<piece.length; c++){
+                        if(!piece[r][c]){ continue; }
+                        let newX = this.x + c + x;
+                        let newY = this.y + r + y;
+                        if(newX < 0 || newX >= COL || newY >= ROW){ return true; }
+                        if(newY < 0){ continue; }
+                        if(board[newY][newX] != VACANT){ return true; }
+                    }
+                }
+                return false;
+            }
+        }
+
+        function randomPiece(){
+            // Simple mapping for demo
+            const i = Math.floor(Math.random() * 7);
+            const pDef = PIECES[i];
+            return new Piece(pDef[0], pDef[1]);
+        }
+
+        function startTetris(){
+            document.getElementById('tetris-start').classList.add('hidden');
+            document.getElementById('tetris-gameover').classList.add('hidden');
+            createBoard();
+            drawBoard();
+            score = 0;
+            document.getElementById('tetris-score').innerText = "0000";
+            activeTetrisPiece = randomPiece();
+            activeTetrisPiece.draw();
+            gameRunning = true;
+            dropStart = Date.now();
+            requestAnimationFrame(tetrisLoop);
+        }
+
+        function resetTetris(){
+            startTetris();
+        }
+
+        function stopTetris(){
+            gameRunning = false;
+        }
+
+        function tetrisLoop(){
+            if(!gameRunning) return;
+            let now = Date.now();
+            let delta = now - dropStart;
+            if(delta > 1000){
+                activeTetrisPiece.moveDown();
+                dropStart = Date.now();
+            }
+            if(!gameOver) requestAnimationFrame(tetrisLoop);
+        }
+
+        window.tetrisMove = function(dir){ if(gameRunning && !gameOver) dir===1 ? activeTetrisPiece.moveRight() : activeTetrisPiece.moveLeft(); };
+        window.tetrisRotate = function(){ if(gameRunning && !gameOver) activeTetrisPiece.rotate(); };
+        window.tetrisDrop = function(){ if(gameRunning && !gameOver) activeTetrisPiece.moveDown(); };
+
+    </script>
+</body>
+</html>
