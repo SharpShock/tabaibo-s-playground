@@ -483,6 +483,10 @@
                     avatarImg.src = character.avatar;
                     avatarImg.className = 'message__avatar';
                     avatarImg.alt = character.name;
+                    // Add error handling for missing images
+                    avatarImg.onerror = function() {
+                        this.style.display = 'none';
+                    };
                     messageDiv.appendChild(avatarImg);
                 }
                 
@@ -579,13 +583,24 @@
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+                    console.error('API Error Details:', errorData);
+                    const errorMsg = errorData.error?.message || errorData.message || `Erro ${response.status}: ${response.statusText}`;
+                    throw new Error(errorMsg);
                 }
 
                 const data = await response.json();
-                return data.choices[0]?.message?.content || 'Não consegui responder...';
+                
+                if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+                    console.error('Invalid API Response:', data);
+                    throw new Error('Resposta inválida da API');
+                }
+                
+                return data.choices[0].message.content || 'Não consegui responder...';
             } catch (error) {
                 console.error('API Error:', error);
+                if (error.message.includes('fetch')) {
+                    throw new Error('Erro de conexão. Verifica a tua internet.');
+                }
                 throw error;
             }
         }
@@ -653,6 +668,10 @@
             if (character.avatar) {
                 avatarImg.src = character.avatar;
                 avatarImg.classList.add('active');
+                // Add error handling for missing images
+                avatarImg.onerror = function() {
+                    this.classList.remove('active');
+                };
             } else {
                 avatarImg.classList.remove('active');
             }
